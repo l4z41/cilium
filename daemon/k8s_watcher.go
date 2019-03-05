@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/prometheus/client_golang/prometheus"
 	"net"
 	"net/url"
 	"os"
@@ -242,6 +243,88 @@ func (*k8sMetrics) Increment(code string, method string, host string) {
 	k8smetrics.LastInteraction.Reset()
 }
 
+type k8sMetricsProvider struct{}
+
+func (k8sMetricsProvider) NewListsMetric(name string) cache.CounterMetric {
+	nc := prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: metrics.K8sClient,
+		Name:      "kubernetes_list_" + name,
+		Help:      "Number of lists called",
+	})
+	metrics.MustRegister(nc)
+	return nc
+}
+
+func (k8sMetricsProvider) NewListDurationMetric(name string) cache.SummaryMetric {
+	nc := prometheus.NewSummary(prometheus.SummaryOpts{
+		Namespace: metrics.K8sClient,
+		Name:      "kubernetes_list_duration_" + name,
+		Help:      "Duration metric of lists",
+	})
+	metrics.MustRegister(nc)
+	return nc
+}
+
+func (k8sMetricsProvider) NewItemsInListMetric(name string) cache.SummaryMetric {
+	nc := prometheus.NewSummary(prometheus.SummaryOpts{
+		Namespace: metrics.K8sClient,
+		Name:      "kubernetes_list_items_" + name,
+		Help:      "Duration metric of lists",
+	})
+	metrics.MustRegister(nc)
+	return nc
+}
+
+func (k8sMetricsProvider) NewWatchesMetric(name string) cache.CounterMetric {
+	nc := prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: metrics.K8sClient,
+		Name:      "kubernetes_watches_" + name,
+		Help:      "Number of watches called",
+	})
+	metrics.MustRegister(nc)
+	return nc
+}
+
+func (k8sMetricsProvider) NewShortWatchesMetric(name string) cache.CounterMetric {
+	nc := prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: metrics.K8sClient,
+		Name:      "kubernetes_short_watches_" + name,
+		Help:      "Number of watches called",
+	})
+	metrics.MustRegister(nc)
+	return nc
+}
+
+func (k8sMetricsProvider) NewWatchDurationMetric(name string) cache.SummaryMetric {
+	nc := prometheus.NewSummary(prometheus.SummaryOpts{
+		Namespace: metrics.K8sClient,
+		Name:      "kubernetes_watch_duration_" + name,
+		Help:      "Number of watches called",
+	})
+	metrics.MustRegister(nc)
+	return nc
+}
+
+func (k8sMetricsProvider) NewItemsInWatchMetric(name string) cache.SummaryMetric {
+	nc := prometheus.NewSummary(prometheus.SummaryOpts{
+		Namespace: metrics.K8sClient,
+		Name:      "kubernetes_watch_items_" + name,
+		Help:      "Number of watches called",
+	})
+	metrics.MustRegister(nc)
+	return nc
+}
+
+func (k8sMetricsProvider) NewLastResourceVersionMetric(name string) cache.GaugeMetric {
+	nc := prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: metrics.K8sClient,
+		Name:      "kubernetes_last_resource_version_" + name,
+		Help:      "Last resource version received",
+	})
+	metrics.MustRegister(nc)
+	return nc
+}
+
 func init() {
 	// Replace error handler with our own
 	runtime.ErrorHandlers = []func(error){
@@ -250,6 +333,9 @@ func init() {
 
 	k8sMetric := &k8sMetrics{}
 	k8s_metrics.Register(k8sMetric, k8sMetric)
+
+	k8sMetricsProvider := &k8sMetricsProvider{}
+	cache.SetReflectorMetricsProvider(k8sMetricsProvider)
 }
 
 // blockWaitGroupToSyncResources ensures that anything which waits on waitGroup
